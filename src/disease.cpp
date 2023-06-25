@@ -84,13 +84,18 @@ void tomo::disease::construct(pugi::xml_node root)
         dcm_studies().push_back({ });
         dcm_studies().back().set_default(*this);
     } else if (m_dcmstudies.size() > 1) {
-        log::printf(tomo::log::WARN, "Found %zu DICOM studies", m_dcmstudies.size());
+        std::stringstream ss;
+
+        ss << "Found " << m_dcmstudies.size() << " DICOM studies";
+        throw std::runtime_error(ss.str());
+        //log::printf(tomo::log::WARN, "Found %zu DICOM studies", m_dcmstudies.size());
     }
 
     if (xtable.size()) {
         throw missing_keys(root, xtable);
     }
-    if (!m_structs.size()) {
+    /* None of this is possible */
+    /* if (!m_structs.size()) {
         throw std::runtime_error("No structure set information");
     }
     if (!m_plans.size()) {
@@ -98,5 +103,5 @@ void tomo::disease::construct(pugi::xml_node root)
     }
     if (!m_images.size()) {
         throw std::runtime_error("No plan images");
-    }
+    } */
 }

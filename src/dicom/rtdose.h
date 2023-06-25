@@ -27,9 +27,7 @@ class rtdose: public dicom {
     float m_gridscal;
     float m_pxmax;
 
-    size_t m_framelen;  /** They don't use DICOM's coordinate system, so I have
-                        to transform the image before writing out. They don't do
-                        this... */
+    size_t m_framelen;
 
     std::array<float, 3> m_imgpos;
 
@@ -81,6 +79,7 @@ public:
     rtdose(const tomo::archive &arch,
            const tomo::disease &dis,
            const tomo::plan    &plan);
+
 
     virtual void flush(const std::filesystem::path &dir, bool dry_run) override;
 

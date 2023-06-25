@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 if (WIN32)
     set(OPT_FLAGS "/O2")
     set(WARN_FLAGS "")
-    set(XTRA_FLAGS "/Zc:__cplusplus /arch:AVX2")
+    set(XTRA_FLAGS "/Zc:__cplusplus /arch:AVX2 /D_CRT_SECURE_NO_DEPRECATE")
 else ()
     set(OPT_FLAGS "-Og -g3")
     set(WARN_FLAGS "-Wall -Wextra -W")
@@ -18,6 +18,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPT_FLAGS} ${WARN_FLAGS} ${XTRA_FLAGS}
 
 find_package(pugixml REQUIRED)
 find_package(DCMTK REQUIRED)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/lookup)
 
 # This little hack is because I develop on Debian
 if (NOT WIN32)
@@ -48,7 +50,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            ${CMAKE_SOURCE_DIR}/src/dicom)
 
 target_link_libraries(${PROJECT_NAME}
-              PRIVATE pugixml DCMTK::DCMTK)
+              PRIVATE pugixml DCMTK::DCMTK lookup)
 
 if (WIN32)
     set_property(TARGET ${PROJECT_NAME} PROPERTY

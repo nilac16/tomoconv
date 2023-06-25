@@ -23,9 +23,7 @@ void tomo::ctseries::calc_geometry() noexcept
 void tomo::ctseries::load_pixel_data()
 {
     /* If this conversion ever fails I'm going to have to rewrite this entire
-    class as a template... And add it and several member functions to an
-    interpreter table. I could do this the C way with void pointers to obviate
-    excessive template instantiation */
+    class as a template... */
     if (image().header().datatype() != "Short_Data") {
         throw std::runtime_error("Unsupported CT data type: "s + image().header().datatype());
     }

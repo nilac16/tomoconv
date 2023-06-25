@@ -6,7 +6,6 @@
 #include <iostream>
 #include <sstream>
 
-/* how tf do i do something like this in C++ */
 
 namespace tomo {
 
@@ -63,8 +62,7 @@ public:
 
     log::level threshold() const noexcept { return m_threshold; }
 
-    /** Return nonzero on error. You can throw exceptions if you wanna fuck shit
-     *  up, I'm not gonna stop you
+    /** Return nonzero on error. Avoid exceptions if you can
      */
     virtual int write(log::level lvl, const char *msg) = 0;
 };
@@ -78,7 +76,7 @@ public:
     };
 
     class appender {
-        std::stringstream ss;   /* I have become my own worst enemy */
+        std::stringstream ss;
         log::level lvl;
 
         void clear();
@@ -101,14 +99,6 @@ public:
 
     logger() = default;
 
-    /** This is fucking disgusting. Use this hella sparingly, only for things
-     *  that can't simply be printf'd
-     * 
-     *  On a less truculent note: using this like std::cout produces a prvalue
-     *  that will be immediately destroyed when the statement ends. The
-     *  destructor for the appender produced by operator<< flushes what has been
-     *  written to a new log line, using log::puts
-     */
     appender operator<<(log::level lvl);
 };
 
@@ -116,8 +106,6 @@ public:
 /** operator<< this a log::level before sending it further data
  *  unlike the printf function above this buffers the message on the heap using
  *  a stringstream, which is really not a good practice for a simple tracer
- * 
- *  
  */
 extern logger log;
 

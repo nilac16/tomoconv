@@ -76,11 +76,6 @@ public:
          */
         void construct_attached_curves(pugi::xml_node root);
 
-        /** wtf coordinate system are they using
-         *  can i always just negate y and z
-         *  I don't need to negate z for the CT/dose
-         *  god wtf is happening with these files
-         */
         void construct_point_data(pugi::xml_node root);
 
         std::string &orientation() noexcept { return m_orient; }

@@ -4,6 +4,7 @@
 #define ARCHIVE_H
 
 #include <filesystem>
+#include <set>
 #include <vector>
 #include <pugixml.hpp>
 #include "patient.h"
@@ -69,6 +70,9 @@ public:
     const pugi::xml_document &ptdoc() const noexcept { return m_ptroot; }
 
     const std::filesystem::path &dir() const noexcept { return m_archdir; }
+
+    /** Attempt to fetch an updated MRN from an external database */
+    void update_mrn(const char *host, uint16_t port);
 };
 
 

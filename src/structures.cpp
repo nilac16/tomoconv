@@ -165,10 +165,6 @@ void tomo::roi::curve::construct(pugi::xml_node root)
 
 std::vector<tomo::roi::curve>
 tomo::roi::load_file(const std::filesystem::path &dir) const
-/** Holy moly look at all those declarations
- *  If only there were a reasonable way to break up a function's
- *  responsibilities and reduce the size of its alphabet
- */
 {
     const pugi::string_t prefix = "ROICurve_"s;
     std::filesystem::path path = dir;
@@ -219,12 +215,9 @@ const char *tomo::roi::interpreted_type() const
         { "Cavity",          "CAVITY" },
         { "BrachyChannel",   "BRACHY_CHANNEL" },
         { "BrachyAccessory", "BRACHY_ACCESSORY" },
-        /* Really unsure about these. They fit the pattern, but it is unlike
-        Java programmers to be so terse in their abbreviations */
+        /* Really unsure about these next two */
         { "BrachySrcApp",    "BRACHY_SRC_APP" },
         { "BrachyChnlShld",  "BRACHY_CHNL_SHLD" },
-        /* I would be utterly unsurprised to learn that it is actually
-        BrachySourceApplication and BrachyChannelShield */
         { "Support",         "SUPPORT" },
         { "Fixation",        "FIXATION" },
         { "DoseRegion",      "DOSE_REGION" },

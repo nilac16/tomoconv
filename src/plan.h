@@ -29,6 +29,37 @@ public:
         const tomo::image &dose(size_t i) const noexcept { return m_doses[i]; }
     };
 
+    class delivery: public constructible {
+        tomo::dbinfo m_dbinfo;
+
+        std::string m_machuid;
+        std::string m_machname;
+
+        bool m_approved;
+
+
+        tomo::dbinfo &dbinfo() noexcept { return m_dbinfo; }
+
+        std::string &machine_uid() noexcept { return m_machuid; }
+        std::string &machine_name() noexcept { return m_machname; }
+
+        bool &approved() noexcept { return m_approved; }
+
+    public:
+        delivery();
+
+        /** From the root node "fullDeliveryReviewDataArray" (lower) */
+        virtual void construct(pugi::xml_node root) override;
+
+
+        const tomo::dbinfo &dbinfo() const noexcept { return m_dbinfo; }
+
+        const std::string &machine_uid() const noexcept { return m_machuid; }
+        const std::string &machine_name() const noexcept { return m_machname; }
+
+        bool approved() const noexcept { return m_approved; }
+    };
+
 private:
     tomo::dbinfo m_dbinfo;
 
@@ -43,7 +74,10 @@ private:
 
     std::vector<tomo::img_data> m_images;   /* fullImageDataArray */
     std::vector<trial> m_trials;            /* fullPlanTrialArray */
+    std::vector<delivery> m_dlvryreview;    /* fullDeliveryReviewDataArray */
 
+
+    void find_rp_uid();
 
     tomo::dbinfo &dbinfo() noexcept { return m_dbinfo; }
     std::string &label() noexcept { return m_label; }

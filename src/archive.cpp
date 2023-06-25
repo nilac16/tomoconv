@@ -144,6 +144,7 @@ void tomo::archive::flush(const std::filesystem::path &dir, bool dry_run)
 
     for (const auto &dis: diseases()) {
         log::printf(tomo::log::DEBUG, "Exporting disease %s", dis.name().c_str());
+
         for (const auto &img: dis.images()) {
             tomo::ctseries ct(*this, dis, img.img);
 
@@ -156,12 +157,14 @@ void tomo::archive::flush(const std::filesystem::path &dir, bool dry_run)
                 log::printf(tomo::log::WARN, "Repeated CT series UID: %s", uid->c_str());
             }
         }
+
         for (const auto &plan: dis.plans()) {
             tomo::rtdose rd(*this, dis, plan);
 
-            log::printf(tomo::log::DEBUG, "Exporting plan %s", plan.label().c_str());
+            log::printf(tomo::log::DEBUG, "Exporting plan dose %s", plan.label().c_str());
             rd.flush(dir, dry_run);
         }
+
         for (const auto &ss: dis.structure_sets()) {
             tomo::rtstruct rs(*this, dis, ss);
 
@@ -169,4 +172,10 @@ void tomo::archive::flush(const std::filesystem::path &dir, bool dry_run)
             rs.flush(dir, dry_run);
         }
     }
+}
+
+
+void tomo::archive::update_mrn(const char *host, uint16_t port)
+{
+    patient().update_mrn(host, port);
 }

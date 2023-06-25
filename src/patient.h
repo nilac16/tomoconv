@@ -40,6 +40,11 @@ public:
 
     /** Returns the PatientSex DICOM code string appropriate for this patient */
     const char *dcmgender() const noexcept;
+
+    /** Use the lookup library to find an updated MRN if possible. Throws a
+     *  std::runtime_error if it fails
+     */
+    void update_mrn(const char *host, uint16_t port);
 };
 
 

@@ -14,8 +14,7 @@ void tomo::rtdose::compute_grid_scaling() noexcept
         [&max](float x) {
             max = std::max(max, x);
         });
-    /* Why is their dose grid scaling weird? Beyond, of course, Java's
-    incredible indisposition to signed integers... */
+    /* Dose grid scaling will be different than tomo's because Java */
     dose_grid_scaling() = max / (float)UINT16_MAX;
 }
 
@@ -37,16 +36,17 @@ void tomo::rtdose::calc_geometry() noexcept
     image_position(1) = -std::fma(dose().header().dim(1) - 1,
                                   dose().header().res(1),
                                   dose().header().start(1));
-    image_position(2) = -std::fma(dose().header().dim(2) - 1,
+    image_position(2) = -dose().header().start(2);
+                        /* -std::fma(dose().header().dim(2) - 1,
                                   dose().header().res(2),
-                                  dose().header().start(2));
+                                  dose().header().start(2)); */
     frame_len() = (size_t)dose().header().dim(0) * dose().header().dim(1);
 }
 
 
 void tomo::rtdose::find_dose()
 {
-    const pugi::string_t query = "Opt_Dose_After_EOP"s;
+    const std::string query = "Opt_Dose_After_EOP"s;
     unsigned i, j = 0;
 
     for (i = 0; i < plan().ntrials(); i++) {
@@ -99,9 +99,8 @@ void tomo::rtdose::find_plan()
 
 
 void tomo::rtdose::write_grid_frame_offset_vec()
-/** Ugh, I just realized how much memory this operation is using */
 {
-    std::vector<float> vec;
+    std::vector<float> vec; /* gross */
     float z = 0.0f;
     int k;
 
@@ -252,28 +251,14 @@ void tomo::rtdose::flush(const std::filesystem::path &dir, bool dry_run)
     char fbuf[80];
     std::vector<uint16_t> data;
     std::filesystem::path path(dir);
-    /* Again, use pointers so that Windows doesn't raise pointless assertions */
-    const float *dptr, *end;  /* "Data" pointer */
-    uint16_t *dest;
-    size_t k;
 
     std::snprintf(fbuf, sizeof fbuf, "RD%s.dcm", dose().dbinfo().uid().c_str());
     path.append(fbuf);
     data.resize(px_data().size());
-    dest = data.data();
-    end = px_data().data() + px_data().size();
-    dptr = end - frame_len();
-    for (k = 0; k < nframes(); k++) {
-        /* OK, dest moves forward through the output, and [dptr, end) move
-        backwards through frames */
-        std::transform(dptr, end, dest,
-            [this](float x) {
-                return static_cast<uint16_t>(x / dose_grid_scaling());
-            });
-        dest += frame_len();
-        end = dptr;
-        dptr -= frame_len();
-    }
+    std::transform(px_data().begin(), px_data().end(), data.begin(),
+        [this](float x) {
+            return static_cast<uint16_t>(x / dose_grid_scaling());
+        });
     insert_pixels(data);
     if (!dry_run) {
         save_file(path);

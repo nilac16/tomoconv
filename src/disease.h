@@ -45,11 +45,7 @@ class disease: public constructible {
     std::vector<tomo::img_data> m_images;
     std::vector<tomo::structset> m_structs; /* This one contains the correct SOP
                                             instance UID for the RT structure
-                                            set... Fucking why, the other one
-                                            under plandata is the only one
-                                            referencing the RTDose's magic
-                                            referenced image sequence... What
-                                            the fuck is happening */
+                                            set */
 
 
     tomo::dbinfo &dbinfo() noexcept { return m_info.dbinfo; }

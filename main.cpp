@@ -11,7 +11,7 @@
 #   include <io.h>
 #   define unreachable() __assume(0)
 
-#   undef ERROR /* Come on guys what the fuck */
+#   undef ERROR /* Come on guys */
 
 #else
 #   define unreachable() __builtin_unreachable()
@@ -19,7 +19,7 @@
 #endif
 
 #if __has_cpp_attribute(assume)
-/* If Microsoft implemented this already imma shit my pants */
+/* No way Microsoft implemented this already */
 #   pragma message "They actually did it"
 #   undef unreachable
 #   define unreachable() [[assume(false)]]
@@ -45,9 +45,14 @@ class args {
                                 when this is read */
 
     std::filesystem::path dir;  /* The argument to -o, --out-dir */
+    bool no_lookup;             /* -s, --skip-mrn */
     bool testing_only;          /* If -t, --test is passed */
-    bool found_path;            /* I could use a std::optional but sometimes I
-                                really don't feel like fielding C++'s pretense */
+    bool found_path;            /* I could use a std::optional but not gonna */
+
+    const char *host;
+    uint16_t port;
+
+    tomo::log::level lthresh;   /* Logging level override */
 
     enum type {
         SHORT,  /* short option, prefixed with a single '-' */
@@ -56,11 +61,14 @@ class args {
     };
 
     /** This takes advantage of the format of C cmdargs on the target system */
-    static type argtype(const char *arg);
+    static type argtype(const char *arg) noexcept;
 
     char *next() noexcept { return argv[++argi]; }
 
-    bool read_output_dir();
+    bool read_output_dir() noexcept;
+    bool read_hostname() noexcept;
+    bool read_port() noexcept;
+    bool read_loglvl() noexcept;
 
     void read_short();
     void read_long();
@@ -75,43 +83,80 @@ public:
     const std::filesystem::path &out_path() const noexcept { return dir; }
 
     bool testing() const noexcept { return testing_only; }
+
+    /* This method name is confusing, considering the variable it refs */
+    bool skip_lookup() const noexcept { return no_lookup; }
+
+    const char *mrn_hostname() const noexcept { return host; }
+    uint16_t mrn_port() const noexcept { return port; }
+
+    tomo::log::level loglvl() const noexcept { return lthresh; }
 };
 
 
-args::type args::argtype(const char *arg)
+args::type args::argtype(const char *arg) noexcept
 {
     if (arg[0] == '-') {
-        switch (arg[1]) {
-        case '-':
-            switch (arg[2]) {
-            case '\0':
-                /* The argument is just "--" */
-                return ARG;
-            default:
-                /* The argument is a string prefixed with "--" */
+        if (arg[1] == '-') {
+            if (arg[2]) {
                 return LONG;
             }
-        case '\0':
-            /* The argument is just '-' */
-            return ARG;
-        default:
-            /* The argument is a string prefixed with '-' */
+        } else if (arg[1]) {
             return SHORT;
         }
-    } else {
-        /* Doesn't start with '-' */
-        return ARG;
     }
+    return ARG;
 }
 
 
-bool args::read_output_dir()
+bool args::read_output_dir() noexcept
 {
     const char *arg;
 
     arg = next();
     if (arg && argtype(arg) == ARG) {
         dir = arg;
+        return true;
+    }
+    return false;
+}
+
+
+bool args::read_hostname() noexcept
+{
+    const char *arg;
+
+    arg = next();
+    if (arg && argtype(arg) == ARG) {
+        host = arg;
+        return true;
+    }
+    return false;
+}
+
+
+bool args::read_port() noexcept
+{
+    const char *arg;
+
+    arg = next();
+    if (arg && argtype(arg) == ARG) {
+        port = atoi(arg);
+        return true;
+    }
+    return false;
+}
+
+
+bool args::read_loglvl() noexcept
+{
+    const char *arg;
+
+    arg = next();
+    if (arg && argtype(arg) == ARG) {
+        lthresh = std::clamp<tomo::log::level>(static_cast<tomo::log::level>(atoi(arg)),
+                                               tomo::log::DEBUG,
+                                               tomo::log::ERROR);
         return true;
     }
     return false;
@@ -129,13 +174,37 @@ void args::read_short()
         case 'o':
             if (nopt == 1) {
                 if (read_output_dir()) {
-                    break;
+                    return;
                 }
             }
             throw std::runtime_error("Short option -o requires an argument");
         case 't':
             testing_only = true;
             break;
+        case 'h':
+            if (nopt == 1) {
+                if (read_hostname()) {
+                    return;
+                }
+            }
+            throw std::runtime_error("Short option -h requires an argument");
+        case 'p':
+            if (nopt == 1) {
+                if (read_port()) {
+                    return;
+                }
+            }
+            throw std::runtime_error("Short option -p requires an argument");
+        case 's':
+            no_lookup = true;
+            break;
+        case 'l':
+            if (nopt == 1) {
+                if (read_loglvl()) {
+                    return;
+                }
+            }
+            throw std::runtime_error("Short option -l requires an argument");
         default:
             tomo::log::printf(tomo::log::WARN, "Unrecognized short option %c", *arg);
             break;
@@ -149,7 +218,11 @@ void args::read_long()
     using map_t = std::map<std::string, int>;
     static const map_t map = {
         { "out-dir"s, 0 },
-        { "test"s, 1 }
+        { "test"s, 1 },
+        { "host"s, 2 },
+        { "port"s, 3 },
+        { "skip-mrn"s, 4 },
+        { "log-lvl", 5 }
     };
     const char *arg = argv[argi] + 2;
     map_t::const_iterator it;
@@ -164,6 +237,24 @@ void args::read_long()
             break;
         case 1:
             testing_only = true;
+            break;
+        case 2:
+            if (!read_hostname()) {
+                throw std::runtime_error("Option --host requires an argument");
+            }
+            break;
+        case 3:
+            if (!read_port()) {
+                throw std::runtime_error("Option --port requires an argument");
+            }
+            break;
+        case 4:
+            no_lookup = true;
+            break;
+        case 5:
+            if (!read_loglvl()) {
+                throw std::runtime_error("Option --log-lvl requires an argument");
+            }
             break;
         default:
             unreachable();
@@ -188,8 +279,12 @@ args::args(int argc, char *argv[]):
     argi(0),
     argv(argv),
     dir("."),
+    no_lookup(false),
     testing_only(false),
-    found_path(false)
+    found_path(false),
+    host("localhost"),
+    port(6006),
+    lthresh(tomo::log::DEBUG)
 {
 
 }
@@ -254,20 +349,13 @@ main_log::main_log(tomo::log::level lvl) noexcept:
 
 
 #if defined(_MSC_VER) && _MSC_VER
-/** This shall be exported as a global symbol with a plain-text C-linkage name.
- *  My hubris is profound, but my satisfaction immeasurable
- */
-extern "C" void unfuck_printf(void)
-{
-    _set_printf_count_output(1);
-}
 
-static class unfuck_printf {    /* Un-fucking-real */
+static class fix_printf {
 
 public:
-    unfuck_printf() noexcept { ::unfuck_printf(); }
+    fix_printf() noexcept { _set_printf_count_output(1); }
 
-} unfuck;  /* The names shall remain until my petulant indignation dies down */
+} fixprintf;
 
 
 class termcolor {
@@ -296,10 +384,9 @@ public:
             attr = FOREGROUND_RED;
             break;
         }
-        if (bold) {
-            /* Not really but it's cool that I'm at least using it */
+        /* if (bold) { */
             attr |= FOREGROUND_INTENSITY;
-        }
+        /* } */
         SetConsoleTextAttribute(hcons, attr);
     }
 
@@ -433,9 +520,25 @@ static void print_usage()
     "\n"
     "Options:\n"
     "    -t, --test             do not write files to the output directory\n"
-    "    -o, --out-dir DIR      provides an output DIR for the resulting DICOMs\n";
+    "    -o, --out-dir DIR      provides an output DIR for the resulting DICOMs\n"
+    "    -h, --host HOST        use hostname HOST for MRN lookups (default localhost)\n"
+    "    -p, --port PORT        use port PORT for MRN lookups (default 6006)\n"
+    "    -s, --skip-mrn         demote MRN lookup errors to warnings and ignore\n"
+    "    -l, --log-lvl LVL      override log level threshold to LVL\n";
 
     puts(usage);
+    {
+        termcolor colr(stdout, tomo::log::ERROR, true);
+        
+        fputs("warning: ", stdout);
+    }
+    {
+        termcolor colr(stdout, tomo::log::ERROR, false);
+
+        puts("Exercise due care when supplying a HOST name for the MRN server. The\n"
+             "communication protocol employed by this application sends plain-text patient\n"
+             "information across transport endpoints. Be sure that you trust the remote server");
+    }
 }
 
 
@@ -444,7 +547,7 @@ int main(int argc, char *argv[])
     std::filesystem::path ptxml;
     tomo::archive arch;
     args args(argc, argv);
-    main_log log(tomo::log::WARN);
+    main_log log(tomo::log::DEBUG);
 
     tomo::log::add(log);
 
@@ -456,6 +559,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    log.threshold() = args.loglvl();
+
     if (!args.testing() && !std::filesystem::exists(args.out_path())) {
         tomo::log << tomo::log::ERROR << "Directory " << args.out_path() << " does not exist. Create it before continuing.";
         return 1;
@@ -463,12 +568,25 @@ int main(int argc, char *argv[])
 
     if (args.testing()) {
         /* Hmm... */
-        log.threshold() = tomo::log::DEBUG;
-        tomo::log::puts(tomo::log::INFO, "Entering testing mode, no files shall be written to disk");
+        /* log.threshold() = tomo::log::DEBUG; */
+        tomo::log::puts(tomo::log::INFO, "Entering testing mode, no files will be written to disk");
     }
 
     try {
         arch.load_file(args.xml_path());
+        try {
+            arch.update_mrn(args.mrn_hostname(), args.mrn_port());
+        } catch (std::runtime_error &e) {
+            if (args.skip_lookup()) {
+                /* Issue a warning that the MRN could not be looked up */
+                tomo::log::printf(tomo::log::WARN, e.what());
+
+            } else {
+                /* Throw to the lower handler */
+                throw e;
+
+            }
+        }
         arch.flush(args.out_path(), args.testing());
         return 0;
 
@@ -484,10 +602,6 @@ int main(int argc, char *argv[])
 
     } catch (std::runtime_error &e) {
         tomo::log::puts(tomo::log::ERROR, e.what());
-
-    } catch (std::exception &e) {
-        /* I want a stack trace so don't actually do anything */
-        throw e;
 
     }
     return 1;

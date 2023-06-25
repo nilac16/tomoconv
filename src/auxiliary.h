@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <pugixml.hpp>
 
+/** Have I *tested* this application on a big endian machine? No. Am I going to
+ *  issue a warning over this anyway? Yeah I guess, since I'm checking it...
+ */
 #if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L
 constexpr bool g_target_lendian = std::endian::native == std::endian::little;
 
@@ -81,13 +84,7 @@ static bool prefixed(const std::basic_string<CharT> &str,
 }
 
 
-/** oh my god
- * 
- *  java
- * 
- *  why are you like this
- * 
- *  i never realized this was needed because i stopped using java 14 years ago
+/** It took me way too long to realize I needed to do this
  */
 template <class PrimT>
 static void endianswap(PrimT &prim)
@@ -108,7 +105,7 @@ static void endianswap(PrimT &prim)
 }
 
 
-/** DCMTK implements this functionality as well... not gonna include it though */
+/** DCMTK implements this functionality as well... not gonna #include it though */
 template <class InputIt>
 static void endianswap(InputIt begin, InputIt end)
 {

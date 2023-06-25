@@ -26,11 +26,8 @@ bool tomo::machine::load_file(const std::filesystem::path &xml)
     try {
         construct(node);
         return true;
-    } catch (tomo::missing_keys &e) {
-        /* std::cerr << "Cannot read machine XML, missing keys:\n";
-        for (auto &key: std::as_const(e).keys()) {
-            std::cerr << '\t' << key << '\n';
-        } */
+    } catch (tomo::missing_keys &) {
+        /* Silently fail */
     }
     return false;
 }
